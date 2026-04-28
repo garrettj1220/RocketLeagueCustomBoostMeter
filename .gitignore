@@ -2,6 +2,9 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+build/
+dist/
+*.spec
 
 # User-specific editor output. Keep overlay-config.example.json in git.
 overlay-config.json

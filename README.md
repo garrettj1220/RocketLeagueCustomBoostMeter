@@ -1,22 +1,65 @@
-# Rocket League Boost Overlay
+# RL Custom UI
 
-A local Streamlabs/OBS browser overlay for Rocket League boost. It reads Rocket League's local Stats API, bridges the raw TCP feed to a browser-friendly event stream, and lets you tune the boost meter in a browser editor.
+Custom Rocket League boost meter for OBS and Streamlabs, with two ways to use it:
 
-## Features
+- `Desktop app`: download the EXE, open it, customize the meter, copy the OBS browser source once, and leave the app running.
+- `Open source`: run the local project from Python and change the HTML, textures, or behavior yourself.
 
-- Live boost amount from Rocket League
-- Streamlabs/OBS Browser Source support
-- Browser editor for size, position, ring alignment, fill length, width, glow, color, and texture
-- Built-in texture skins grouped by style
-- Custom texture folder for your own PNG boost meters
-- Saved local config in `overlay-config.json`
+## Download The EXE
 
-## Requirements
+If you just want the app:
 
-- Windows
-- Python 3
-- Rocket League with the Stats API enabled
-- Streamlabs Desktop or OBS
+**[Download the latest Windows EXE from GitHub Releases](https://github.com/garrettj1220/RocketLeagueCustomBoostMeter/releases/latest)**
+
+You want:
+
+```txt
+RLCustomUI.exe
+```
+
+The desktop app and OBS both use the same local overlay URL:
+
+```txt
+http://127.0.0.1:8765/boost-overlay.html
+```
+
+`127.0.0.1` is correct for every user. The overlay is served from each person's own PC.
+
+## What It Does
+
+- Reads Rocket League's local Stats API on port `49123`
+- Serves one stable browser source URL for OBS and Streamlabs
+- Includes a desktop editor with a live embedded preview of the real overlay renderer
+- Supports built-in skins and custom PNG skins
+- Saves meter config locally between launches
+- Supports launch with Windows and tray startup
+
+## Quick Start
+
+### Option 1: EXE download
+
+For normal users:
+
+1. Download the latest `RLCustomUI.exe` release from GitHub Releases.
+2. Enable Rocket League Stats API using the config block below.
+3. Open `RLCustomUI.exe`.
+4. Copy the OBS URL from the app.
+5. Add it as a Browser Source in OBS or Streamlabs.
+
+### Option 2: Open source project
+
+For users who want to run or modify the source:
+
+```powershell
+py -3 -m pip install -r requirements-desktop.txt
+.\start-desktop-app.ps1
+```
+
+If you only want the local open-source bridge without the desktop app shell:
+
+```powershell
+.\start-overlay.ps1
+```
 
 ## Enable Rocket League Stats API
 
@@ -32,7 +75,7 @@ For Steam, this is often:
 D:\Steam\steamapps\common\rocketleague\TAGame\Config\DefaultStatsAPI.ini
 ```
 
-Set:
+Use:
 
 ```ini
 [TAGame.MatchStatsExporter_TA]
@@ -40,29 +83,13 @@ Port=49123
 PacketSendRate=10
 ```
 
-Start Rocket League after saving.
+Restart Rocket League after saving.
 
-## Run The Overlay Server
+Official Rocket League Stats API docs:
 
-From this folder, run either:
+[Rocket League Stats API](https://www.rocketleague.com/en/developer/stats-api)
 
-```powershell
-.\start-overlay.ps1
-```
-
-or:
-
-```bat
-start-overlay.bat
-```
-
-The server runs at:
-
-```txt
-http://127.0.0.1:8765
-```
-
-## Add To Streamlabs Or OBS
+## OBS Setup
 
 Add a Browser Source with:
 
@@ -76,95 +103,101 @@ Recommended source size:
 1920 x 1080
 ```
 
-## Edit The Meter
+The browser source stays the same. Users only set it up once.
 
-Open:
+## Customize
 
-```txt
-http://127.0.0.1:8765/boost-overlay.html?edit=1
-```
+The desktop app is the main editor now.
 
-Adjust the sliders, then click **Save**. Streamlabs/OBS uses the saved config automatically.
+Customize supports:
 
-Useful controls:
+- skin selection with built-in style groups and custom uploads
+- ring position and shape controls
+- image size
+- ring glow controls
+- separate number and label positioning
+- custom label text
+- separate ring, number, label, and text glow colors
+- separate number and label glow strength and blur
 
-- `X` / `Y`: position from the bottom-right corner
-- `Size`: whole meter size
-- `Center X` / `Center Y`: arc center
-- `Radius`: arc circle size
-- `Start`: where the arc begins
-- `Length`: how far 100 boost fills
-- `Total`: dash spacing; usually leave this alone unless tuning the arc behavior
-- `Width`: visible fill thickness
-- `Glow`: glow thickness
-- `Fill Color`: arc fill color
-- `Number`: boost number text color
-- `Label`: `BOOST` label text color
-- `Image`: texture skin
+Changes save locally and update the live OBS source.
 
-## Texture Styles
+## Built-In And Custom Skins
 
-Built-in textures live in:
+Built-in skins live in:
 
 ```txt
 textures/builtin/style-1
 textures/builtin/style-2
 ```
 
-The editor groups them as `Built-in: Style 1` and `Built-in: Style 2`.
-
-## Add Custom Textures
-
-Put PNG files in:
+User PNG skins are stored in:
 
 ```txt
-textures/custom
+%LOCALAPPDATA%\RLCustomUI\textures\custom
 ```
 
-Then refresh the editor page:
+Example on Windows:
 
 ```txt
-http://127.0.0.1:8765/boost-overlay.html?edit=1
+C:\Users\<YourUser>\AppData\Local\RLCustomUI\textures\custom
 ```
 
-Your custom textures appear in the Image dropdown under `Custom`.
-
-Texture tips:
-
-- Use transparent PNGs.
-- Square images work best.
-- Built-in textures are `1266 x 1266`; matching that size makes alignment easier.
+The desktop app also supports `Add custom skin` directly from the file picker.
 
 ## Project Layout
 
 ```txt
-boost-overlay.html          Browser overlay and editor
-server.py                   Local Rocket League TCP bridge and static server
-overlay-config.example.json Example saved config
-textures/builtin/style-1    Included style 1 texture skins
-textures/builtin/style-2    Included style 2 texture skins
-textures/custom             User-added texture skins
-start-overlay.ps1           PowerShell launcher
-start-overlay.bat           Batch launcher
+boost-overlay.html          Actual browser source used by OBS and the app preview
+desktop-ui.html             WebView desktop app UI
+webview_app.py              Main desktop app entrypoint
+boost_meter_core.py         Shared bridge, config, texture, and local server logic
+server.py                   Minimal open-source local bridge entrypoint
+requirements-desktop.txt    Python dependencies for the desktop app
+start-desktop-app.ps1       Run the desktop app from source
+start-desktop-app.bat       Windows batch launcher for the desktop app
+start-overlay.ps1           Run the open-source bridge from source
+start-overlay.bat           Windows batch launcher for the bridge
+textures/builtin/style-1    Built-in skin set 1
+textures/builtin/style-2    Built-in skin set 2
+textures/custom             Placeholder folder for user skins in source mode
+overlay-config.example.json Example config
+```
+
+## Build The EXE
+
+To package the app yourself:
+
+```powershell
+py -3 -m pip install -r requirements-desktop.txt
+py -3 -m PyInstaller --noconfirm --clean --windowed --name RLCustomUI --icon "app-icon.ico" --add-data "boost-overlay.html;." --add-data "desktop-ui.html;." --add-data "app-icon.png;." --add-data "app-icon.ico;." --add-data "textures;textures" --hidden-import webview.platforms.winforms --hidden-import pythonnet --hidden-import clr_loader "webview_app.py"
+```
+
+Output:
+
+```txt
+dist\RLCustomUI\RLCustomUI.exe
 ```
 
 ## Troubleshooting
 
-If the overlay says disconnected:
+If the overlay does not update:
 
 - Make sure Rocket League is open.
 - Make sure `PacketSendRate` is greater than `0`.
-- Confirm Rocket League is listening on port `49123`.
-- Restart `start-overlay.ps1` after changing server files.
+- Restart Rocket League after changing `DefaultStatsAPI.ini`.
+- Keep the Browser Source URL as `http://127.0.0.1:8765/boost-overlay.html`.
 
-If Streamlabs does not update:
+If the desktop app opens but the preview is blank:
 
-- Right-click the Browser Source and refresh cache.
-- Toggle the source off/on.
-- Keep the URL as `http://127.0.0.1:8765/boost-overlay.html`.
+- Make sure Microsoft Edge WebView2 Runtime is installed.
 
-If custom textures do not show:
+If the app icon looks wrong after replacing builds:
 
-- Confirm they are `.png` files.
-- Put them directly inside `textures/custom`.
-- Refresh the editor page.
+- Delete old shortcuts and pin the new EXE again.
+
+If custom skins do not show:
+
+- Use transparent `.png` files.
+- Keep them square when possible.
+- Reload the app after adding a large batch of skins.

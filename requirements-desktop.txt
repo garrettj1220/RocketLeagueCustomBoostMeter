@@ -1,0 +1,4 @@
+Pillow>=10.4.0
+customtkinter>=5.2.2
+pystray>=0.19.5
+pywebview>=6.2.1
