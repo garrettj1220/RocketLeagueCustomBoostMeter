@@ -244,7 +244,9 @@
     <label class="control">Total <input id="ringTotalInput" type="range" min="1" max="2000" step="1"><span id="ringTotalValue" class="value-readout"></span></label>
     <label class="control">Width <input id="ringWidthInput" type="range" min="1" max="80" step="1"><span id="ringWidthValue" class="value-readout"></span></label>
     <label class="control">Glow <input id="glowWidthInput" type="range" min="1" max="100" step="1"><span id="glowWidthValue" class="value-readout"></span></label>
-    <label class="control">Color <input id="colorInput" type="color"><span id="colorValue" class="value-readout"></span></label>
+    <label class="control">Fill Color <input id="colorInput" type="color"><span id="colorValue" class="value-readout"></span></label>
+    <label class="control">Number <input id="numberColorInput" type="color"><span id="numberColorValue" class="value-readout"></span></label>
+    <label class="control">Label <input id="labelColorInput" type="color"><span id="labelColorValue" class="value-readout"></span></label>
     <div class="actions">
       <button id="saveButton" type="button">Save</button>
       <button id="resetButton" class="secondary" type="button">Reset</button>
@@ -278,6 +280,7 @@
     const dotEl = document.getElementById("dot");
     const statusTextEl = document.getElementById("statusText");
     const boostNumberEl = document.getElementById("boostNumber");
+    const boostLabelEl = document.querySelector(".boost-label");
     const ringFillEl = document.getElementById("ringFill");
     const ringGlowEl = document.getElementById("ringGlow");
     const panelEl = document.querySelector(".panel");
@@ -285,7 +288,7 @@
     const meterRingEl = document.querySelector(".meter-ring");
     let events;
     let hasBoostValue = false;
-    let loadedVersion = null;
+    let lastBoostSeenAt = 0;
     let overlayConfig = {
       x: 32,
       y: 32,
@@ -300,6 +303,8 @@
       glowWidth: 24,
       glowAlpha: 0.28,
       color: "#64d8ff",
+      numberColor: "#f5fbff",
+      labelColor: "#f5fbff",
       image: "textures/builtin/style-1/BlueBoost.png"
     };
     let skinImages = [];
@@ -409,6 +414,10 @@
       }
 
       if (boost === null) {
+        if (hasBoostValue && performance.now() - lastBoostSeenAt < 2000) {
+          return;
+        }
+
         hasBoostValue = false;
         boostNumberEl.textContent = "--";
         ringFillEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
@@ -417,6 +426,7 @@
       }
 
       hasBoostValue = true;
+      lastBoostSeenAt = performance.now();
       boostNumberEl.textContent = String(boost);
       const ringLength = (boost / 100) * overlayConfig.ringLength;
       ringFillEl.style.strokeDasharray = `${ringLength} ${overlayConfig.ringTotal}`;
@@ -463,6 +473,8 @@
       ringGlowEl.style.strokeWidth = overlayConfig.glowWidth * scale;
       ringFillEl.style.stroke = overlayConfig.color;
       ringGlowEl.style.stroke = `rgba(${color.r}, ${color.g}, ${color.b}, ${overlayConfig.glowAlpha})`;
+      boostNumberEl.style.color = overlayConfig.numberColor;
+      boostLabelEl.style.color = overlayConfig.labelColor;
 
       if (hasBoostValue) {
         const currentBoost = Number(boostNumberEl.textContent);
@@ -524,7 +536,7 @@
 
       document.body.classList.add("editing");
 
-      const fields = ["x", "y", "size", "ringCenterX", "ringCenterY", "ringRadius", "ringStart", "ringLength", "ringTotal", "ringWidth", "glowWidth", "color", "image"];
+      const fields = ["x", "y", "size", "ringCenterX", "ringCenterY", "ringRadius", "ringStart", "ringLength", "ringTotal", "ringWidth", "glowWidth", "color", "numberColor", "labelColor", "image"];
       fields.forEach((field) => {
         const input = document.getElementById(`${field}Input`);
         if (!input) {
@@ -552,6 +564,8 @@
           glowWidth: 24,
           glowAlpha: 0.28,
           color: "#64d8ff",
+          numberColor: "#f5fbff",
+          labelColor: "#f5fbff",
           image: "textures/builtin/style-1/BlueBoost.png"
         });
       });
@@ -605,29 +619,9 @@
       });
     }
 
-    async function checkForOverlayUpdate() {
-      try {
-        const response = await fetch("/version", { cache: "no-store" });
-        const payload = await response.json();
-
-        if (loadedVersion === null) {
-          loadedVersion = payload.version;
-          return;
-        }
-
-        if (payload.version !== loadedVersion) {
-          window.location.reload();
-        }
-      } catch {
-        return;
-      }
-    }
-
     setupEditor();
     Promise.all([loadTextures(), loadConfig()]);
     connect();
-    checkForOverlayUpdate();
-    window.setInterval(checkForOverlayUpdate, 2000);
   </script>
 </body>
 </html>

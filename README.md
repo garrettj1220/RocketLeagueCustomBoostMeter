@@ -97,7 +97,9 @@ Useful controls:
 - `Total`: dash spacing; usually leave this alone unless tuning the arc behavior
 - `Width`: visible fill thickness
 - `Glow`: glow thickness
-- `Color`: fill color
+- `Fill Color`: arc fill color
+- `Number`: boost number text color
+- `Label`: `BOOST` label text color
 - `Image`: texture skin
 
 ## Texture Styles

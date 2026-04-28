@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
 import socket
+import threading
 import time
 
 
@@ -12,6 +13,13 @@ ROCKET_LEAGUE_PORT = 49123
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "overlay-config.json"
 TEXTURE_DIRS = (ROOT / "textures" / "builtin", ROOT / "textures" / "custom")
+STATE_LOCK = threading.Lock()
+STATE = {
+    "status": "starting",
+    "error": "",
+    "message": None,
+    "sequence": 0
+}
 DEFAULT_CONFIG = {
     "x": 32,
     "y": 32,
@@ -25,6 +33,8 @@ DEFAULT_CONFIG = {
     "ringWidth": 17,
     "glowWidth": 24,
     "color": "#64d8ff",
+    "numberColor": "#f5fbff",
+    "labelColor": "#f5fbff",
     "glowAlpha": 0.28,
     "image": "textures/builtin/style-1/BlueBoost.png"
 }
@@ -140,42 +150,34 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
 
+        last_sequence = -1
+        last_status = None
+        last_heartbeat = 0.0
+
         while True:
+            with STATE_LOCK:
+                snapshot = dict(STATE)
+
             try:
-                with socket.create_connection((ROCKET_LEAGUE_HOST, ROCKET_LEAGUE_PORT), timeout=3) as rl_socket:
-                    rl_socket.settimeout(3)
-                    self.write_event("bridge", {"status": "connected"})
+                if snapshot["status"] != last_status:
+                    self.write_event("bridge", {
+                        "status": snapshot["status"],
+                        "error": snapshot["error"]
+                    })
+                    last_status = snapshot["status"]
 
-                    buffer = ""
-                    decoder = json.JSONDecoder()
+                if snapshot["message"] is not None and snapshot["sequence"] != last_sequence:
+                    self.write_event("message", snapshot["message"])
+                    last_sequence = snapshot["sequence"]
 
-                    while True:
-                        chunk = rl_socket.recv(65536)
-                        if not chunk:
-                            break
+                now = time.time()
+                if now - last_heartbeat > 1:
+                    self.write_event("heartbeat", {"time": now})
+                    last_heartbeat = now
 
-                        buffer += chunk.decode("utf-8", errors="replace")
-
-                        while buffer.strip():
-                            buffer = buffer.lstrip()
-                            try:
-                                message, end_index = decoder.raw_decode(buffer)
-                            except json.JSONDecodeError:
-                                break
-
-                            buffer = buffer[end_index:]
-                            normalized = normalize_message(message)
-                            self.write_event("message", normalized)
-
-                time.sleep(0.05)
+                time.sleep(0.02)
             except (BrokenPipeError, ConnectionResetError):
                 return
-            except Exception as error:
-                try:
-                    self.write_event("bridge", {"status": "disconnected", "error": str(error)})
-                except (BrokenPipeError, ConnectionResetError):
-                    return
-                time.sleep(1.5)
 
     def write_event(self, event_name, payload):
         self.wfile.write(f"event: {event_name}\n".encode("utf-8"))
@@ -192,6 +194,54 @@ def normalize_message(message):
             pass
 
     return message
+
+
+def set_bridge_state(status, error=""):
+    with STATE_LOCK:
+        STATE["status"] = status
+        STATE["error"] = error
+
+
+def publish_message(message):
+    with STATE_LOCK:
+        STATE["message"] = message
+        STATE["sequence"] += 1
+        STATE["status"] = "connected"
+        STATE["error"] = ""
+
+
+def rocket_league_reader():
+    decoder = json.JSONDecoder()
+
+    while True:
+        try:
+            set_bridge_state("connecting")
+            with socket.create_connection((ROCKET_LEAGUE_HOST, ROCKET_LEAGUE_PORT), timeout=3) as rl_socket:
+                rl_socket.settimeout(3)
+                set_bridge_state("connected")
+                buffer = ""
+
+                while True:
+                    chunk = rl_socket.recv(65536)
+                    if not chunk:
+                        break
+
+                    buffer += chunk.decode("utf-8", errors="replace")
+
+                    while buffer.strip():
+                        buffer = buffer.lstrip()
+                        try:
+                            message, end_index = decoder.raw_decode(buffer)
+                        except json.JSONDecodeError:
+                            break
+
+                        buffer = buffer[end_index:]
+                        publish_message(normalize_message(message))
+
+            time.sleep(0.02)
+        except Exception as error:
+            set_bridge_state("disconnected", str(error))
+            time.sleep(1.0)
 
 
 def load_config():
@@ -235,10 +285,11 @@ def sanitize_config(data):
         value = max(minimum, min(maximum, value))
         config[key] = int(value) if key != "glowAlpha" else value
 
-    color = str(config.get("color", DEFAULT_CONFIG["color"]))
-    if not (len(color) == 7 and color.startswith("#")):
-        color = DEFAULT_CONFIG["color"]
-    config["color"] = color
+    for key in ("color", "numberColor", "labelColor"):
+        color = str(config.get(key, DEFAULT_CONFIG[key]))
+        if not (len(color) == 7 and color.startswith("#")):
+            color = DEFAULT_CONFIG[key]
+        config[key] = color
 
     image = str(config.get("image", DEFAULT_CONFIG["image"])).replace("\\", "/")
     valid_images = {texture["path"] for texture in list_textures()}
@@ -276,6 +327,7 @@ def list_textures():
 
 
 def main():
+    threading.Thread(target=rocket_league_reader, daemon=True).start()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"Rocket League overlay bridge running at http://{HOST}:{PORT}/boost-overlay.html")
     server.serve_forever()

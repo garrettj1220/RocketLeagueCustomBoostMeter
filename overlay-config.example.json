@@ -11,6 +11,8 @@
   "ringWidth": 17,
   "glowWidth": 24,
   "color": "#64d8ff",
+  "numberColor": "#f5fbff",
+  "labelColor": "#f5fbff",
   "glowAlpha": 0.28,
   "image": "textures/builtin/style-1/BlueBoost.png"
 }
