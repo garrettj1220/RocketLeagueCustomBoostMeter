@@ -252,7 +252,7 @@
   </aside>
 
   <main class="panel">
-    <img id="boostImage" class="boost-image" src="textures/builtin/BlueBoost.png" alt="">
+    <img id="boostImage" class="boost-image" src="textures/builtin/style-1/BlueBoost.png" alt="">
 
     <div class="top">
       <div class="title">RL Stats API</div>
@@ -300,7 +300,7 @@
       glowWidth: 24,
       glowAlpha: 0.28,
       color: "#64d8ff",
-      image: "textures/builtin/BlueBoost.png"
+      image: "textures/builtin/style-1/BlueBoost.png"
     };
     let skinImages = [];
     const isEditing = new URLSearchParams(window.location.search).has("edit");
@@ -491,11 +491,7 @@
 
       const imageInput = document.getElementById("imageInput");
       imageInput.textContent = "";
-      const groups = [
-        ["builtin", "Built-in styles"],
-        ["custom", "Custom styles"]
-      ];
-
+      const groups = [...new Map(skinImages.map((texture) => [texture.group, texture.label || texture.group])).entries()];
       groups.forEach(([groupKey, label]) => {
         const textures = skinImages.filter((texture) => texture.group === groupKey);
         const optgroup = document.createElement("optgroup");
@@ -556,7 +552,7 @@
           glowWidth: 24,
           glowAlpha: 0.28,
           color: "#64d8ff",
-          image: "textures/builtin/BlueBoost.png"
+          image: "textures/builtin/style-1/BlueBoost.png"
         });
       });
     }

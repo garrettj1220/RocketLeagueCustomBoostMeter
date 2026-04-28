@@ -7,7 +7,7 @@ A local Streamlabs/OBS browser overlay for Rocket League boost. It reads Rocket 
 - Live boost amount from Rocket League
 - Streamlabs/OBS Browser Source support
 - Browser editor for size, position, ring alignment, fill length, width, glow, color, and texture
-- Built-in texture skins
+- Built-in texture skins grouped by style
 - Custom texture folder for your own PNG boost meters
 - Saved local config in `overlay-config.json`
 
@@ -100,6 +100,17 @@ Useful controls:
 - `Color`: fill color
 - `Image`: texture skin
 
+## Texture Styles
+
+Built-in textures live in:
+
+```txt
+textures/builtin/style-1
+textures/builtin/style-2
+```
+
+The editor groups them as `Built-in: Style 1` and `Built-in: Style 2`.
+
 ## Add Custom Textures
 
 Put PNG files in:
@@ -114,7 +125,7 @@ Then refresh the editor page:
 http://127.0.0.1:8765/boost-overlay.html?edit=1
 ```
 
-Your custom textures appear in the Image dropdown as `custom: filename`.
+Your custom textures appear in the Image dropdown under `Custom`.
 
 Texture tips:
 
@@ -128,7 +139,8 @@ Texture tips:
 boost-overlay.html          Browser overlay and editor
 server.py                   Local Rocket League TCP bridge and static server
 overlay-config.example.json Example saved config
-textures/builtin            Included texture skins
+textures/builtin/style-1    Included style 1 texture skins
+textures/builtin/style-2    Included style 2 texture skins
 textures/custom             User-added texture skins
 start-overlay.ps1           PowerShell launcher
 start-overlay.bat           Batch launcher

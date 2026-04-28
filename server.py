@@ -26,7 +26,7 @@ DEFAULT_CONFIG = {
     "glowWidth": 24,
     "color": "#64d8ff",
     "glowAlpha": 0.28,
-    "image": "textures/builtin/BlueBoost.png"
+    "image": "textures/builtin/style-1/BlueBoost.png"
 }
 
 
@@ -253,13 +253,24 @@ def list_textures():
     textures = []
     for directory in TEXTURE_DIRS:
         directory.mkdir(parents=True, exist_ok=True)
-        group = directory.name
-        for path in sorted(directory.glob("*.png")):
+        for path in sorted(directory.rglob("*.png")):
             relative_path = path.relative_to(ROOT).as_posix()
+            relative_parts = path.relative_to(directory).parts
+            if directory.name == "builtin" and len(relative_parts) > 1:
+                group = f"builtin/{relative_parts[0]}"
+                label = f"Built-in: {relative_parts[0].replace('-', ' ').title()}"
+            elif directory.name == "builtin":
+                group = "builtin"
+                label = "Built-in"
+            else:
+                group = "custom"
+                label = "Custom"
+
             textures.append({
                 "path": relative_path,
                 "name": path.stem,
-                "group": group
+                "group": group,
+                "label": label
             })
     return textures
 
