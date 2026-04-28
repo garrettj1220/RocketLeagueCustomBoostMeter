@@ -394,7 +394,10 @@
       const players = normalizePlayers(data.Players || data.players);
       const target = data.Target || (data.Game && data.Game.Target) || {};
       const player = findTargetPlayer(data, players);
-      const boost = readBoost(player);
+      let boost = readBoost(player);
+      if (boost === null && player) {
+        boost = 0;
+      }
 
       if (boost === null) {
         if (!hasBoostValue) {
