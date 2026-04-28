@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rocket League Boost Overlay</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      color: #f4fbff;
+      font-family: Consolas, "Cascadia Mono", "Segoe UI", monospace;
+    }
+
+    .panel {
+      position: fixed;
+      right: 32px;
+      bottom: 32px;
+      width: 270px;
+      min-height: 270px;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .editor {
+      position: fixed;
+      left: 18px;
+      top: 18px;
+      display: none;
+      width: 360px;
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(9, 13, 18, 0.88);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+      z-index: 20;
+    }
+
+    body.editing .editor {
+      display: block;
+    }
+
+    .editor h1 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .control {
+      display: grid;
+      grid-template-columns: 108px minmax(0, 1fr) 54px;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      color: rgba(244, 251, 255, 0.78);
+      font-size: 12px;
+    }
+
+    .control input[type="range"] {
+      width: 100%;
+    }
+
+    .control input[type="color"],
+    .control select {
+      width: 100%;
+    }
+
+    .value-readout {
+      color: rgba(244, 251, 255, 0.58);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .actions button {
+      flex: 1;
+      height: 34px;
+      border: 0;
+      border-radius: 6px;
+      color: #081019;
+      background: #64d8ff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .actions button.secondary {
+      color: #f4fbff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .top {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: rgba(244, 251, 255, 0.72);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #ff5f66;
+      box-shadow: 0 0 12px rgba(255, 95, 102, 0.7);
+    }
+
+    .dot.connected {
+      background: #66d38f;
+      box-shadow: 0 0 12px rgba(102, 211, 143, 0.7);
+    }
+
+    .boost {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      display: block;
+      width: 112px;
+      transform: translate(-50%, -52%);
+      text-align: center;
+      z-index: 2;
+    }
+
+    .boost-number {
+      min-width: 0;
+      color: #f5fbff;
+      font-size: 58px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.05em;
+      line-height: 0.9;
+      text-shadow: 0 0 12px rgba(90, 205, 255, 0.8), 0 3px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .boost-label {
+      margin-top: 8px;
+      padding-bottom: 0;
+      color: rgba(245, 251, 255, 0.74);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.75);
+    }
+
+    .meter-ring {
+      position: absolute;
+      inset: 0;
+      width: 270px;
+      height: 270px;
+      overflow: visible;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .ring-glow,
+    .ring-fill {
+      fill: none;
+      stroke-linecap: butt;
+      transform: rotate(104deg);
+      transform-origin: 135px 135px;
+    }
+
+    .ring-glow {
+      stroke: rgba(100, 216, 255, 0.28);
+      stroke-width: 24;
+      stroke-dasharray: 0 760;
+      filter: blur(3px);
+      transition: stroke-dasharray 120ms linear;
+    }
+
+    .ring-fill {
+      stroke: #64d8ff;
+      stroke-width: 17;
+      stroke-dasharray: 0 760;
+      filter: drop-shadow(0 0 7px rgba(100, 216, 255, 0.9));
+      transition: stroke-dasharray 120ms linear;
+    }
+
+    .boost-image {
+      display: block;
+      width: 270px;
+      height: 270px;
+      object-fit: contain;
+      filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.44));
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <aside class="editor">
+    <h1>Boost Meter Editor</h1>
+    <label class="control">Image <select id="imageInput"></select><span class="value-readout"></span></label>
+    <label class="control">X <input id="xInput" type="range" min="0" max="1800" step="1"><span id="xValue" class="value-readout"></span></label>
+    <label class="control">Y <input id="yInput" type="range" min="0" max="1000" step="1"><span id="yValue" class="value-readout"></span></label>
+    <label class="control">Size <input id="sizeInput" type="range" min="100" max="700" step="1"><span id="sizeValue" class="value-readout"></span></label>
+    <label class="control">Center X <input id="ringCenterXInput" type="range" min="0" max="700" step="1"><span id="ringCenterXValue" class="value-readout"></span></label>
+    <label class="control">Center Y <input id="ringCenterYInput" type="range" min="0" max="700" step="1"><span id="ringCenterYValue" class="value-readout"></span></label>
+    <label class="control">Radius <input id="ringRadiusInput" type="range" min="10" max="350" step="1"><span id="ringRadiusValue" class="value-readout"></span></label>
+    <label class="control">Start <input id="ringStartInput" type="range" min="0" max="360" step="1"><span id="ringStartValue" class="value-readout"></span></label>
+    <label class="control">Length <input id="ringLengthInput" type="range" min="0" max="1400" step="1"><span id="ringLengthValue" class="value-readout"></span></label>
+    <label class="control">Total <input id="ringTotalInput" type="range" min="1" max="2000" step="1"><span id="ringTotalValue" class="value-readout"></span></label>
+    <label class="control">Width <input id="ringWidthInput" type="range" min="1" max="80" step="1"><span id="ringWidthValue" class="value-readout"></span></label>
+    <label class="control">Glow <input id="glowWidthInput" type="range" min="1" max="100" step="1"><span id="glowWidthValue" class="value-readout"></span></label>
+    <label class="control">Color <input id="colorInput" type="color"><span id="colorValue" class="value-readout"></span></label>
+    <div class="actions">
+      <button id="saveButton" type="button">Save</button>
+      <button id="resetButton" class="secondary" type="button">Reset</button>
+    </div>
+  </aside>
+
+  <main class="panel">
+    <img id="boostImage" class="boost-image" src="textures/builtin/BlueBoost.png" alt="">
+
+    <div class="top">
+      <div class="title">RL Stats API</div>
+      <div class="status">
+        <span id="dot" class="dot"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </div>
+
+    <div class="boost">
+      <div id="boostNumber" class="boost-number">--</div>
+      <div class="boost-label">Boost</div>
+    </div>
+
+    <svg class="meter-ring" viewBox="0 0 270 270" aria-hidden="true">
+      <circle id="ringGlow" class="ring-glow" cx="135" cy="135" r="120"></circle>
+      <circle id="ringFill" class="ring-fill" cx="135" cy="135" r="120"></circle>
+    </svg>
+
+  </main>
+
+  <script>
+    const dotEl = document.getElementById("dot");
+    const statusTextEl = document.getElementById("statusText");
+    const boostNumberEl = document.getElementById("boostNumber");
+    const ringFillEl = document.getElementById("ringFill");
+    const ringGlowEl = document.getElementById("ringGlow");
+    const panelEl = document.querySelector(".panel");
+    const boostImageEl = document.getElementById("boostImage");
+    const meterRingEl = document.querySelector(".meter-ring");
+    let events;
+    let hasBoostValue = false;
+    let loadedVersion = null;
+    let overlayConfig = {
+      x: 32,
+      y: 32,
+      size: 270,
+      ringCenterX: 135,
+      ringCenterY: 135,
+      ringRadius: 120,
+      ringStart: 104,
+      ringLength: 535,
+      ringTotal: 760,
+      ringWidth: 17,
+      glowWidth: 24,
+      glowAlpha: 0.28,
+      color: "#64d8ff",
+      image: "textures/builtin/BlueBoost.png"
+    };
+    let skinImages = [];
+    const isEditing = new URLSearchParams(window.location.search).has("edit");
+
+    function setStatus(text, connected) {
+      statusTextEl.textContent = text;
+      dotEl.classList.toggle("connected", Boolean(connected));
+    }
+
+    function normalizePlayers(players) {
+      if (Array.isArray(players)) {
+        return players;
+      }
+
+      if (players && typeof players === "object") {
+        return Object.keys(players).map((key) => {
+          const value = players[key];
+          return value && typeof value === "object" ? { ...value, _key: key } : value;
+        }).filter(Boolean);
+      }
+
+      return [];
+    }
+
+    function readBoost(player) {
+      if (!player || typeof player !== "object") {
+        return null;
+      }
+
+      const possibleKeys = ["Boost", "boost", "BoostAmount", "boostAmount"];
+
+      for (const key of possibleKeys) {
+        if (player[key] !== undefined) {
+          const value = Number(player[key]);
+          if (Number.isFinite(value)) {
+            return Math.max(0, Math.min(100, Math.round(value)));
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function readName(value) {
+      if (!value || typeof value !== "object") {
+        return "";
+      }
+
+      return value.Name || value.name || value.PlayerName || value.playerName || value.Id || value.id || value._key || "";
+    }
+
+    function findTargetPlayer(data, players) {
+      const target = data.Target || (data.Game && data.Game.Target) || {};
+      const targetValues = [
+        target.PlayerID,
+        target.PlayerId,
+        target.Player,
+        target.Id,
+        target.id,
+        target.Shortcut,
+        target.Name,
+        target.name
+      ].filter((value) => value !== undefined && value !== null).map(String);
+
+      if (targetValues.length > 0) {
+        const match = players.find((player) => {
+          const playerValues = [
+            player.PlayerID,
+            player.PlayerId,
+            player.Player,
+            player.Id,
+            player.id,
+            player.Shortcut,
+            player.Name,
+            player.name,
+            player._key
+          ].filter((value) => value !== undefined && value !== null).map(String);
+
+          return targetValues.some((targetValue) => playerValues.includes(targetValue));
+        });
+
+        if (match) {
+          return match;
+        }
+      }
+
+      return players.find((player) => readBoost(player) !== null) || null;
+    }
+
+    function updateDisplay(message) {
+      const eventName = message.Event || message.event || message.Type || message.type || "unknown";
+      let data = message.Data || message.data || message;
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          data = message;
+        }
+      }
+      const players = normalizePlayers(data.Players || data.players);
+      const target = data.Target || (data.Game && data.Game.Target) || {};
+      const player = findTargetPlayer(data, players);
+      const boost = readBoost(player);
+
+      if (boost === null) {
+        if (!hasBoostValue) {
+          boostNumberEl.textContent = "--";
+          ringFillEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
+          ringGlowEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
+        }
+        return;
+      }
+
+      hasBoostValue = true;
+      boostNumberEl.textContent = String(boost);
+      const ringLength = (boost / 100) * overlayConfig.ringLength;
+      ringFillEl.style.strokeDasharray = `${ringLength} ${overlayConfig.ringTotal}`;
+      ringGlowEl.style.strokeDasharray = `${ringLength} ${overlayConfig.ringTotal}`;
+    }
+
+    function hexToRgb(hex) {
+      const clean = hex.replace("#", "");
+      return {
+        r: parseInt(clean.slice(0, 2), 16),
+        g: parseInt(clean.slice(2, 4), 16),
+        b: parseInt(clean.slice(4, 6), 16)
+      };
+    }
+
+    function applyConfig(config) {
+      overlayConfig = { ...overlayConfig, ...config };
+      const scale = overlayConfig.size / 270;
+      const color = hexToRgb(overlayConfig.color);
+
+      panelEl.style.right = `${overlayConfig.x}px`;
+      panelEl.style.bottom = `${overlayConfig.y}px`;
+      panelEl.style.width = `${overlayConfig.size}px`;
+      panelEl.style.minHeight = `${overlayConfig.size}px`;
+      boostImageEl.style.width = `${overlayConfig.size}px`;
+      boostImageEl.style.height = `${overlayConfig.size}px`;
+      boostImageEl.src = `${overlayConfig.image}?v=${encodeURIComponent(overlayConfig.image)}`;
+      meterRingEl.setAttribute("viewBox", `0 0 ${overlayConfig.size} ${overlayConfig.size}`);
+      meterRingEl.style.width = `${overlayConfig.size}px`;
+      meterRingEl.style.height = `${overlayConfig.size}px`;
+
+      ringFillEl.setAttribute("cx", overlayConfig.ringCenterX * scale);
+      ringFillEl.setAttribute("cy", overlayConfig.ringCenterY * scale);
+      ringFillEl.setAttribute("r", overlayConfig.ringRadius * scale);
+      ringGlowEl.setAttribute("cx", overlayConfig.ringCenterX * scale);
+      ringGlowEl.setAttribute("cy", overlayConfig.ringCenterY * scale);
+      ringGlowEl.setAttribute("r", overlayConfig.ringRadius * scale);
+
+      ringFillEl.style.transform = `rotate(${overlayConfig.ringStart}deg)`;
+      ringGlowEl.style.transform = `rotate(${overlayConfig.ringStart}deg)`;
+      ringFillEl.style.transformOrigin = `${overlayConfig.ringCenterX * scale}px ${overlayConfig.ringCenterY * scale}px`;
+      ringGlowEl.style.transformOrigin = `${overlayConfig.ringCenterX * scale}px ${overlayConfig.ringCenterY * scale}px`;
+      ringFillEl.style.strokeWidth = overlayConfig.ringWidth * scale;
+      ringGlowEl.style.strokeWidth = overlayConfig.glowWidth * scale;
+      ringFillEl.style.stroke = overlayConfig.color;
+      ringGlowEl.style.stroke = `rgba(${color.r}, ${color.g}, ${color.b}, ${overlayConfig.glowAlpha})`;
+
+      if (hasBoostValue) {
+        const currentBoost = Number(boostNumberEl.textContent);
+        if (Number.isFinite(currentBoost)) {
+          const ringLength = (currentBoost / 100) * overlayConfig.ringLength;
+          ringFillEl.style.strokeDasharray = `${ringLength} ${overlayConfig.ringTotal}`;
+          ringGlowEl.style.strokeDasharray = `${ringLength} ${overlayConfig.ringTotal}`;
+        }
+      }
+
+      updateEditorControls();
+    }
+
+    async function loadConfig() {
+      const response = await fetch("/config", { cache: "no-store" });
+      applyConfig(await response.json());
+    }
+
+    async function loadTextures() {
+      const response = await fetch("/textures", { cache: "no-store" });
+      skinImages = await response.json();
+
+      if (!isEditing) {
+        return;
+      }
+
+      const imageInput = document.getElementById("imageInput");
+      imageInput.textContent = "";
+      skinImages.forEach((texture) => {
+        const option = document.createElement("option");
+        option.value = texture.path;
+        option.textContent = `${texture.group}: ${texture.name}`;
+        imageInput.appendChild(option);
+      });
+      updateEditorControls();
+    }
+
+    async function saveConfig() {
+      await fetch("/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(overlayConfig)
+      });
+    }
+
+    function setupEditor() {
+      if (!isEditing) {
+        return;
+      }
+
+      document.body.classList.add("editing");
+
+      const fields = ["x", "y", "size", "ringCenterX", "ringCenterY", "ringRadius", "ringStart", "ringLength", "ringTotal", "ringWidth", "glowWidth", "color", "image"];
+      fields.forEach((field) => {
+        const input = document.getElementById(`${field}Input`);
+        if (!input) {
+          return;
+        }
+        input.addEventListener("input", () => {
+          const value = input.type === "range" ? Number(input.value) : input.value;
+          applyConfig({ [field]: value });
+        });
+      });
+
+      document.getElementById("saveButton").addEventListener("click", saveConfig);
+      document.getElementById("resetButton").addEventListener("click", () => {
+        applyConfig({
+          x: 32,
+          y: 32,
+          size: 270,
+          ringCenterX: 135,
+          ringCenterY: 135,
+          ringRadius: 120,
+          ringStart: 104,
+          ringLength: 535,
+          ringTotal: 760,
+          ringWidth: 17,
+          glowWidth: 24,
+          glowAlpha: 0.28,
+          color: "#64d8ff",
+          image: "textures/builtin/BlueBoost.png"
+        });
+      });
+    }
+
+    function updateEditorControls() {
+      if (!isEditing) {
+        return;
+      }
+
+      Object.entries(overlayConfig).forEach(([key, value]) => {
+        const input = document.getElementById(`${key}Input`);
+        const readout = document.getElementById(`${key}Value`);
+        if (input) {
+          input.value = value;
+        }
+        if (readout) {
+          readout.textContent = value;
+        }
+      });
+    }
+
+    function connect() {
+      setStatus("Connecting", false);
+
+      if (events) {
+        events.close();
+      }
+
+      events = new EventSource("/events");
+
+      events.addEventListener("open", () => {
+        setStatus("Bridge open", true);
+      });
+
+      events.addEventListener("bridge", (event) => {
+        const bridge = JSON.parse(event.data);
+        if (bridge.status === "connected") {
+          setStatus("Connected", true);
+        } else if (!hasBoostValue) {
+          setStatus("RL disconnected", false);
+        }
+      });
+
+      events.addEventListener("message", (event) => {
+        updateDisplay(JSON.parse(event.data));
+      });
+
+      events.addEventListener("error", () => {
+        setStatus("Bridge error", false);
+      });
+    }
+
+    async function checkForOverlayUpdate() {
+      try {
+        const response = await fetch("/version", { cache: "no-store" });
+        const payload = await response.json();
+
+        if (loadedVersion === null) {
+          loadedVersion = payload.version;
+          return;
+        }
+
+        if (payload.version !== loadedVersion) {
+          window.location.reload();
+        }
+      } catch {
+        return;
+      }
+    }
+
+    setupEditor();
+    Promise.all([loadTextures(), loadConfig()]);
+    connect();
+    checkForOverlayUpdate();
+    window.setInterval(checkForOverlayUpdate, 2000);
+  </script>
+</body>
+</html>

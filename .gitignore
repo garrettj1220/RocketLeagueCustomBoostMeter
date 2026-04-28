@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+
+# User-specific editor output. Keep overlay-config.example.json in git.
+overlay-config.json
+
+# Users can drop their own textures here without committing them.
+textures/custom/*
+!textures/custom/.gitkeep
