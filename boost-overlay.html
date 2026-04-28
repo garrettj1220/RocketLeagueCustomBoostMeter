@@ -77,6 +77,15 @@
       width: 100%;
     }
 
+    .control select {
+      height: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 5px;
+      color: #f4fbff;
+      background: #151c26;
+      font: inherit;
+    }
+
     .value-readout {
       color: rgba(244, 251, 255, 0.58);
       font-variant-numeric: tabular-nums;
@@ -482,11 +491,24 @@
 
       const imageInput = document.getElementById("imageInput");
       imageInput.textContent = "";
-      skinImages.forEach((texture) => {
-        const option = document.createElement("option");
-        option.value = texture.path;
-        option.textContent = `${texture.group}: ${texture.name}`;
-        imageInput.appendChild(option);
+      const groups = [
+        ["builtin", "Built-in styles"],
+        ["custom", "Custom styles"]
+      ];
+
+      groups.forEach(([groupKey, label]) => {
+        const textures = skinImages.filter((texture) => texture.group === groupKey);
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = textures.length > 0 ? label : `${label} - none found`;
+
+        textures.forEach((texture) => {
+          const option = document.createElement("option");
+          option.value = texture.path;
+          option.textContent = texture.name;
+          optgroup.appendChild(option);
+        });
+
+        imageInput.appendChild(optgroup);
       });
       updateEditorControls();
     }
