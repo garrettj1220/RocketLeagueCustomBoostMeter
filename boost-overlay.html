@@ -395,16 +395,15 @@
       const target = data.Target || (data.Game && data.Game.Target) || {};
       const player = findTargetPlayer(data, players);
       let boost = readBoost(player);
-      if (boost === null && player) {
+      if (boost === null && player && player.bHasCar === true) {
         boost = 0;
       }
 
       if (boost === null) {
-        if (!hasBoostValue) {
-          boostNumberEl.textContent = "--";
-          ringFillEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
-          ringGlowEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
-        }
+        hasBoostValue = false;
+        boostNumberEl.textContent = "--";
+        ringFillEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
+        ringGlowEl.style.strokeDasharray = `0 ${overlayConfig.ringTotal}`;
         return;
       }
 
